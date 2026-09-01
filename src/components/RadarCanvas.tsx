@@ -24,6 +24,8 @@ interface RadarState {
   active: boolean
   color: { phosphor: string; line: string }
   sweepAngle: number
+  unwrappedTarget: number
+  lastRawAngle: number | null
 }
 
 export function RadarCanvas({ history, sweepSpeed, persistBrightness, barColor, maxRange, active }: RadarCanvasProps) {
@@ -36,6 +38,8 @@ export function RadarCanvas({ history, sweepSpeed, persistBrightness, barColor, 
     active,
     color: COLOR_PALETTE[barColor],
     sweepAngle: 0,
+    unwrappedTarget: 0,
+    lastRawAngle: null,
   })
 
   stateRef.current.history = history
@@ -57,7 +61,9 @@ export function RadarCanvas({ history, sweepSpeed, persistBrightness, barColor, 
 
     const draw = (now: number) => {
       const dpr = window.devicePixelRatio || 1
-      const size = canvas.clientWidth
+      const cw = canvas.clientWidth
+      const ch = canvas.clientHeight
+      const size = Math.max(1, Math.min(cw, ch))
       canvas.width = size * dpr
       canvas.height = size * dpr
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -68,17 +74,44 @@ export function RadarCanvas({ history, sweepSpeed, persistBrightness, barColor, 
       ctx.fillRect(0, 0, size, size)
 
       const center = size / 2
-      const radius = center - 14
+      const radius = center - 24
       const dt = Math.min((now - lastTime) / 1000, 0.1)
       lastTime = now
 
-      if (state.active) {
-        state.sweepAngle = (state.sweepAngle + state.sweepSpeed * dt * 60) % 360
+      // Seguimiento con ángulo "desenvuelto": el servo continuo sube 0->360 y
+      // envuelve de vuelta a 0. Para evitar que el barrido persiga por la ruta
+      // corta y dé saltos hacia atrás, acumulamos una versión monótona del ángulo
+      // objetivo (sin el corte de 360°). El barrido solo avanza hacia adelante.
+      const last = state.history[state.history.length - 1]
+
+      if (state.active && last) {
+        // Desenvolver el ángulo: mantener un contador continuo que solo avanza
+        // hacia adelante. Cuando el servo envuelve 360->0 (delta < -180),
+        // compensamos con +360 para que el objetivo siga siendo monótono.
+        const raw = last.angle
+        if (state.lastRawAngle !== null) {
+          let delta = raw - state.lastRawAngle
+          if (delta < -180) delta += 360
+          state.unwrappedTarget += delta
+        } else {
+          state.unwrappedTarget = raw
+        }
+        state.lastRawAngle = raw
+
+        // Evitar un salto si el objetivo quedó atrás (p.ej. tras reconectar)
+        if (state.unwrappedTarget < state.sweepAngle) state.unwrappedTarget = state.sweepAngle
+
+        // Avanzar siempre hacia adelante hasta alcanzar la posición objetivo
+        const step = Math.min(state.unwrappedTarget - state.sweepAngle, state.sweepSpeed * 60 * dt)
+        state.sweepAngle += Math.max(0, step)
       }
+      // Si no hay conexión activa, el barrido permanece estático.
 
       drawReticle(ctx, center, radius, state)
       drawPlots(ctx, center, radius, state)
-      drawSweep(ctx, center, radius, state)
+      if (state.active) {
+        drawSweep(ctx, center, radius, state)
+      }
       drawAmbientGlow(ctx, center, state)
 
       rafId = requestAnimationFrame(draw)
@@ -135,13 +168,14 @@ function drawReticle(ctx: CanvasRenderingContext2D, center: number, radius: numb
   ctx.stroke()
 
   ctx.font = '10px monospace'
-  ctx.textAlign = 'center'
   ctx.fillStyle = color
   ctx.globalAlpha = 0.6
-  ctx.fillText('0°', polarX(center, radius + 12, 0), polarY(center, radius + 12, 0) + 3)
-  ctx.fillText('90°', polarX(center, radius + 12, 90), polarY(center, radius + 12, 90) + 3)
-  ctx.fillText('180°', polarX(center, radius + 12, 180), polarY(center, radius + 12, 180) + 3)
-  ctx.fillText('270°', polarX(center, radius + 12, 270), polarY(center, radius + 12, 270) + 3)
+  ctx.textAlign = 'center'
+  ctx.fillText('0°', polarX(center, radius + 14, 0), polarY(center, radius + 14, 0) + 3)
+  ctx.textAlign = 'center'
+  ctx.fillText('90°', polarX(center, radius + 14, 90), polarY(center, radius + 14, 90) + 4)
+  ctx.fillText('180°', polarX(center, radius + 14, 180), polarY(center, radius + 14, 180) + 3)
+  ctx.fillText('270°', polarX(center, radius + 14, 270), polarY(center, radius + 14, 270) + 4)
 
   ctx.globalAlpha = 1
 }
@@ -152,6 +186,7 @@ function drawPlots(ctx: CanvasRenderingContext2D, center: number, radius: number
 
   for (let i = 0; i < hist.length; i++) {
     const r = hist[i]
+    if (!r.detected) continue
     const normalized = Math.min(r.distance / s.maxRange, 1)
     const dotRadius = 2 + normalized * 2
     const x = polarX(center, radius * normalized, r.angle)

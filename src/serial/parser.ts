@@ -18,6 +18,7 @@ export function parseReading(raw: string): RadarReading | null {
     return {
       angle: normalizedAngle,
       distance: Math.max(0, distance),
+      detected: obj.detected ? obj.detected === 1 || obj.detected === true : distance > 0,
     }
   } catch {
     return null

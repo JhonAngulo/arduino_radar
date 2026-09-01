@@ -1,6 +1,7 @@
 export interface RadarReading {
   angle: number
   distance: number
+  detected: boolean
 }
 
 export interface SerialSettings {

@@ -71,8 +71,6 @@ export default function App() {
               data={history}
               barColor={barColor}
               maxRange={maxRange}
-              width={420}
-              height={420}
             />
           </div>
         </main>

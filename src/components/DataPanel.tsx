@@ -7,6 +7,8 @@ export interface DataPanelProps {
 }
 
 export function DataPanel({ current, sampleCount, active }: DataPanelProps) {
+  const detected = current?.detected === true
+
   return (
     <div className="panel">
       <div className="panel-title">Lecturas en Vivo</div>
@@ -17,7 +19,13 @@ export function DataPanel({ current, sampleCount, active }: DataPanelProps) {
         </div>
         <div className="reading">
           <span className="muted">Distancia</span>
-          <strong>{current ? `${Math.round(current.distance)} cm` : '—'}</strong>
+          <strong>{detected ? `${Math.round(current.distance)} cm` : '—'}</strong>
+        </div>
+        <div className={`reading ${detected ? 'det' : 'no-det'}`}>
+          <span className="muted">Detección</span>
+          <strong className={detected ? 'det' : 'no-det'}>
+            {current ? (detected ? 'OBJETO' : 'vacío') : '—'}
+          </strong>
         </div>
         <div className="reading">
           <span className="muted">Muestras</span>

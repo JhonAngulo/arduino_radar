@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createSerialPort, isWebSerialSupported } from '../serial/serialConnection'
 import { parseReading } from '../serial/parser'
+import { playRadarBlip } from '../utils/radarSound'
 import { ConnectionStatus, type RadarReading, type SerialSettings } from '../types'
 
 const MAX_HISTORY = 360
@@ -36,6 +37,7 @@ export function useRadarData(settings: SerialSettings) {
         onData: (line) => {
           const reading = parseReading(line)
           if (reading) {
+            if (reading.detected) playRadarBlip()
             setCurrent(reading)
             setHistory((prev) => [...prev.slice(-(MAX_HISTORY - 1)), reading])
           }
