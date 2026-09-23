@@ -1,10 +1,8 @@
 import type { BarColor } from '../types'
 
 export interface ControlPanelProps {
-  sweepSpeed: number
-  onSweepSpeed: (v: number) => void
-  persistBrightness: number
-  onPersistBrightness: (v: number) => void
+  persistSeconds: number
+  onPersistSeconds: (v: number) => void
   barColor: BarColor
   onBarColor: (c: BarColor) => void
   maxRange: number
@@ -12,10 +10,8 @@ export interface ControlPanelProps {
 }
 
 export function ControlPanel({
-  sweepSpeed,
-  onSweepSpeed,
-  persistBrightness,
-  onPersistBrightness,
+  persistSeconds,
+  onPersistSeconds,
   barColor,
   onBarColor,
   maxRange,
@@ -26,24 +22,14 @@ export function ControlPanel({
       <div className="panel-title">Controles de Barrido</div>
 
       <label className="field">
-        <span className="field-label">Velocidad: {sweepSpeed}</span>
+        <span className="field-label">Persistencia: {persistSeconds.toFixed(1)} s</span>
         <input
           type="range"
-          min={1}
-          max={20}
-          value={sweepSpeed}
-          onChange={(e) => onSweepSpeed(Number(e.target.value))}
-        />
-      </label>
-
-      <label className="field">
-        <span className="field-label">Persistencia: {Math.round(persistBrightness * 100)}%</span>
-        <input
-          type="range"
-          min={1}
-          max={8}
-          value={persistBrightness}
-          onChange={(e) => onPersistBrightness(Number(e.target.value))}
+          min={0.3}
+          max={5}
+          step={0.2}
+          value={persistSeconds}
+          onChange={(e) => onPersistSeconds(Number(e.target.value))}
         />
       </label>
 

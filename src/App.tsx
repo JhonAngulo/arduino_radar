@@ -9,10 +9,9 @@ import { ConnectionStatus, type BarColor } from './types'
 
 export default function App() {
   const [baudRate, setBaudRate] = useState(9600)
-  const [sweepSpeed, setSweepSpeed] = useState(4)
-  const [persistBrightness, setPersistBrightness] = useState(4)
+  const [persistSeconds, setPersistSeconds] = useState(2.5)
   const [barColor, setBarColor] = useState<BarColor>('green')
-  const [maxRange, setMaxRange] = useState(400)
+  const [maxRange, setMaxRange] = useState(200)
 
   const { supported, status, portName, error, current, history, connect, disconnect } = useRadarData({
     baudRate,
@@ -42,10 +41,8 @@ export default function App() {
             onDisconnect={disconnect}
           />
           <ControlPanel
-            sweepSpeed={sweepSpeed}
-            onSweepSpeed={setSweepSpeed}
-            persistBrightness={persistBrightness}
-            onPersistBrightness={setPersistBrightness}
+            persistSeconds={persistSeconds}
+            onPersistSeconds={setPersistSeconds}
             barColor={barColor}
             onBarColor={setBarColor}
             maxRange={maxRange}
@@ -58,8 +55,7 @@ export default function App() {
           <div className="radar-frame">
             <RadarCanvas
               history={history}
-              sweepSpeed={sweepSpeed}
-              persistBrightness={persistBrightness}
+              persistSeconds={persistSeconds}
               barColor={barColor}
               maxRange={maxRange}
               active={active}

@@ -1,6 +1,8 @@
 import type { RadarReading } from '../types'
 
-export function parseReading(raw: string): RadarReading | null {
+export type ParsedReading = Omit<RadarReading, 'timestamp'>
+
+export function parseReading(raw: string): ParsedReading | null {
   const line = raw.trim()
   if (!line) return null
 

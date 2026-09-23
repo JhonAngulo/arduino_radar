@@ -35,8 +35,9 @@ export function useRadarData(settings: SerialSettings) {
       await serialRef.current.connect({
         baudRate: settingsRef.current.baudRate,
         onData: (line) => {
-          const reading = parseReading(line)
-          if (reading) {
+          const parsed = parseReading(line)
+          if (parsed) {
+            const reading: RadarReading = { ...parsed, timestamp: performance.now() }
             if (reading.detected) playRadarBlip()
             setCurrent(reading)
             setHistory((prev) => [...prev.slice(-(MAX_HISTORY - 1)), reading])

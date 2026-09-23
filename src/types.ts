@@ -2,6 +2,7 @@ export interface RadarReading {
   angle: number
   distance: number
   detected: boolean
+  timestamp: number
 }
 
 export interface SerialSettings {

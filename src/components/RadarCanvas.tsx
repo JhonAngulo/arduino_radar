@@ -3,8 +3,7 @@ import type { BarColor, RadarReading } from '../types'
 
 export interface RadarCanvasProps {
   history: RadarReading[]
-  sweepSpeed: number
-  persistBrightness: number
+  persistSeconds: number
   barColor: BarColor
   maxRange: number
   active: boolean
@@ -18,33 +17,26 @@ const COLOR_PALETTE: Record<BarColor, { phosphor: string; line: string }> = {
 
 interface RadarState {
   history: RadarReading[]
-  sweepSpeed: number
-  persistBrightness: number
+  persistSeconds: number
   maxRange: number
   active: boolean
   color: { phosphor: string; line: string }
   sweepAngle: number
-  unwrappedTarget: number
-  lastRawAngle: number | null
 }
 
-export function RadarCanvas({ history, sweepSpeed, persistBrightness, barColor, maxRange, active }: RadarCanvasProps) {
+export function RadarCanvas({ history, persistSeconds, barColor, maxRange, active }: RadarCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef<RadarState>({
     history,
-    sweepSpeed,
-    persistBrightness,
+    persistSeconds,
     maxRange,
     active,
     color: COLOR_PALETTE[barColor],
     sweepAngle: 0,
-    unwrappedTarget: 0,
-    lastRawAngle: null,
   })
 
   stateRef.current.history = history
-  stateRef.current.sweepSpeed = sweepSpeed
-  stateRef.current.persistBrightness = persistBrightness
+  stateRef.current.persistSeconds = persistSeconds
   stateRef.current.maxRange = maxRange
   stateRef.current.active = active
   stateRef.current.color = COLOR_PALETTE[barColor]
@@ -70,7 +62,7 @@ export function RadarCanvas({ history, sweepSpeed, persistBrightness, barColor, 
 
       const state = stateRef.current
 
-      ctx.fillStyle = `rgba(2, 8, 6, ${1 - state.persistBrightness * 0.12})`
+      ctx.fillStyle = 'rgba(2, 8, 6, 0.02)'
       ctx.fillRect(0, 0, size, size)
 
       const center = size / 2
@@ -78,37 +70,23 @@ export function RadarCanvas({ history, sweepSpeed, persistBrightness, barColor, 
       const dt = Math.min((now - lastTime) / 1000, 0.1)
       lastTime = now
 
-      // Seguimiento con ángulo "desenvuelto": el servo continuo sube 0->360 y
-      // envuelve de vuelta a 0. Para evitar que el barrido persiga por la ruta
-      // corta y dé saltos hacia atrás, acumulamos una versión monótona del ángulo
-      // objetivo (sin el corte de 360°). El barrido solo avanza hacia adelante.
+      // Barrido de IDA Y VUELTA: el ángulo del Arduino va y viene entre 0° y
+      // 360° (invierte al llegar al límite) para no enredar los cables.
+      // El barrido visual se acerca al ángulo objetivo por el camino más corto,
+      // aceptando movimiento en ambos sentidos.
       const last = state.history[state.history.length - 1]
 
       if (state.active && last) {
-        // Desenvolver el ángulo: mantener un contador continuo que solo avanza
-        // hacia adelante. Cuando el servo envuelve 360->0 (delta < -180),
-        // compensamos con +360 para que el objetivo siga siendo monótono.
-        const raw = last.angle
-        if (state.lastRawAngle !== null) {
-          let delta = raw - state.lastRawAngle
-          if (delta < -180) delta += 360
-          state.unwrappedTarget += delta
-        } else {
-          state.unwrappedTarget = raw
-        }
-        state.lastRawAngle = raw
-
-        // Evitar un salto si el objetivo quedó atrás (p.ej. tras reconectar)
-        if (state.unwrappedTarget < state.sweepAngle) state.unwrappedTarget = state.sweepAngle
-
-        // Avanzar siempre hacia adelante hasta alcanzar la posición objetivo
-        const step = Math.min(state.unwrappedTarget - state.sweepAngle, state.sweepSpeed * 60 * dt)
-        state.sweepAngle += Math.max(0, step)
+        const target = last.angle
+        const rawDiff = ((target - state.sweepAngle) % 360 + 360) % 360
+        const diff = rawDiff > 180 ? rawDiff - 360 : rawDiff
+        const follow = Math.min(Math.abs(diff), 720 * dt)
+        state.sweepAngle = (state.sweepAngle + Math.sign(diff) * follow + 360) % 360
       }
       // Si no hay conexión activa, el barrido permanece estático.
 
       drawReticle(ctx, center, radius, state)
-      drawPlots(ctx, center, radius, state)
+      drawPlots(ctx, center, radius, state, now)
       if (state.active) {
         drawSweep(ctx, center, radius, state)
       }
@@ -180,24 +158,38 @@ function drawReticle(ctx: CanvasRenderingContext2D, center: number, radius: numb
   ctx.globalAlpha = 1
 }
 
-function drawPlots(ctx: CanvasRenderingContext2D, center: number, radius: number, s: RadarState) {
+function drawPlots(
+  ctx: CanvasRenderingContext2D,
+  center: number,
+  radius: number,
+  s: RadarState,
+  now: number
+) {
   const color = s.color.phosphor
   const hist = s.history
+  const persistSec = Math.max(0.1, s.persistSeconds)
 
   for (let i = 0; i < hist.length; i++) {
     const r = hist[i]
     if (!r.detected) continue
+
+    // Persistencia basada en TIEMPO REAL: el brillo decae según los segundos
+    // transcurridos desde la medición. A los `persistSeconds`, el punto desaparece.
+    const elapsed = (now - r.timestamp) / 1000
+    if (elapsed >= persistSec) continue
+    const alpha = Math.max(0, 0.9 * (1 - elapsed / persistSec))
+
     const normalized = Math.min(r.distance / s.maxRange, 1)
     const dotRadius = 2 + normalized * 2
     const x = polarX(center, radius * normalized, r.angle)
     const y = polarY(center, radius * normalized, r.angle)
 
-    ctx.fillStyle = `${color}${0.9 - (i / hist.length) * 0.5})`
+    ctx.fillStyle = `${color}${alpha.toFixed(3)})`
     ctx.beginPath()
     ctx.arc(x, y, dotRadius, 0, Math.PI * 2)
     ctx.fill()
 
-    ctx.fillStyle = `${color}1)`
+    ctx.fillStyle = `${color}${alpha.toFixed(3)})`
     ctx.beginPath()
     ctx.arc(x, y, dotRadius * 0.45, 0, Math.PI * 2)
     ctx.fill()
