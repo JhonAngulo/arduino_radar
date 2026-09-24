@@ -61,7 +61,7 @@ export function PolarChart({ data, barColor, maxRange }: PolarChartProps) {
       }
       const normalized = Math.min(r.distance / maxRange, 1)
       const x = cx + radius * normalized * Math.cos((r.angle * Math.PI) / 180)
-      const y = cy + radius * normalized * Math.sin((r.angle * Math.PI) / 180)
+      const y = cy - radius * normalized * Math.sin((r.angle * Math.PI) / 180)
       if (!pen) {
         ctx.moveTo(x, y)
         pen = true

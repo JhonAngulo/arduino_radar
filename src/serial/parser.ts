@@ -17,10 +17,21 @@ export function parseReading(raw: string): ParsedReading | null {
 
     const normalizedAngle = ((angle % 360) + 360) % 360
 
+    let detected: boolean
+    if (typeof obj.detected === 'boolean') {
+      detected = obj.detected
+    } else if (obj.detected === 1) {
+      detected = true
+    } else if (obj.detected === 0) {
+      detected = false
+    } else {
+      detected = distance > 0
+    }
+
     return {
       angle: normalizedAngle,
       distance: Math.max(0, distance),
-      detected: obj.detected ? obj.detected === 1 || obj.detected === true : distance > 0,
+      detected,
     }
   } catch {
     return null

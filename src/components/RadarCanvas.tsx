@@ -107,7 +107,7 @@ function polarX(center: number, radius: number, angleDeg: number): number {
 }
 
 function polarY(center: number, radius: number, angleDeg: number): number {
-  return center + radius * Math.sin((angleDeg * Math.PI) / 180)
+  return center - radius * Math.sin((angleDeg * Math.PI) / 180)
 }
 
 function drawReticle(ctx: CanvasRenderingContext2D, center: number, radius: number, s: RadarState) {
@@ -203,7 +203,7 @@ function drawSweep(ctx: CanvasRenderingContext2D, center: number, radius: number
   ctx.fillStyle = 'rgba(0,255,90,0.10)'
   ctx.beginPath()
   ctx.moveTo(center, center)
-  ctx.arc(center, center, radius, ((angle - 26) * Math.PI) / 180, (angle * Math.PI) / 180)
+  ctx.arc(center, center, radius, (-(angle + 13) * Math.PI) / 180, (-(angle - 13) * Math.PI) / 180)
   ctx.closePath()
   ctx.fill()
 

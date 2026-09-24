@@ -22,7 +22,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>MICRO RADAR 360</h1>
+        <h1>MICRO RADAR</h1>
         <span className="subtitle">Military-style radar interface</span>
         {active && <span className="live-badge">● LIVE</span>}
       </header>
