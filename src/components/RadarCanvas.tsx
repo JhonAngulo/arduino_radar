@@ -6,6 +6,7 @@ export interface RadarCanvasProps {
   persistSeconds: number
   barColor: BarColor
   maxRange: number
+  detectDistance: number
   active: boolean
 }
 
@@ -19,17 +20,26 @@ interface RadarState {
   history: RadarReading[]
   persistSeconds: number
   maxRange: number
+  detectDistance: number
   active: boolean
   color: { phosphor: string; line: string }
   sweepAngle: number
 }
 
-export function RadarCanvas({ history, persistSeconds, barColor, maxRange, active }: RadarCanvasProps) {
+export function RadarCanvas({
+  history,
+  persistSeconds,
+  barColor,
+  maxRange,
+  detectDistance,
+  active,
+}: RadarCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef<RadarState>({
     history,
     persistSeconds,
     maxRange,
+    detectDistance,
     active,
     color: COLOR_PALETTE[barColor],
     sweepAngle: 0,
@@ -38,6 +48,7 @@ export function RadarCanvas({ history, persistSeconds, barColor, maxRange, activ
   stateRef.current.history = history
   stateRef.current.persistSeconds = persistSeconds
   stateRef.current.maxRange = maxRange
+  stateRef.current.detectDistance = detectDistance
   stateRef.current.active = active
   stateRef.current.color = COLOR_PALETTE[barColor]
 
@@ -154,6 +165,16 @@ function drawReticle(ctx: CanvasRenderingContext2D, center: number, radius: numb
   ctx.fillText('90°', polarX(center, radius + 14, 90), polarY(center, radius + 14, 90) + 4)
   ctx.fillText('180°', polarX(center, radius + 14, 180), polarY(center, radius + 14, 180) + 3)
   ctx.fillText('270°', polarX(center, radius + 14, 270), polarY(center, radius + 14, 270) + 4)
+
+  const detectR = radius * Math.min(s.detectDistance / s.maxRange, 1)
+  ctx.strokeStyle = 'rgba(255,40,40,0.85)'
+  ctx.lineWidth = 1.5
+  ctx.setLineDash([4, 5])
+  ctx.globalAlpha = 0.9
+  ctx.beginPath()
+  ctx.arc(center, center, detectR, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.setLineDash([])
 
   ctx.globalAlpha = 1
 }

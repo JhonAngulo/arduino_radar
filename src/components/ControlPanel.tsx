@@ -7,6 +7,8 @@ export interface ControlPanelProps {
   onBarColor: (c: BarColor) => void
   maxRange: number
   onMaxRange: (v: number) => void
+  detectDistance: number
+  onDetectDistance: (v: number) => void
 }
 
 export function ControlPanel({
@@ -16,6 +18,8 @@ export function ControlPanel({
   onBarColor,
   maxRange,
   onMaxRange,
+  detectDistance,
+  onDetectDistance,
 }: ControlPanelProps) {
   return (
     <div className="panel">
@@ -34,7 +38,7 @@ export function ControlPanel({
       </label>
 
       <label className="field">
-        <span className="field-label">Rango máximo: {maxRange} cm</span>
+        <span className="field-label">Rango de gráfica: {maxRange} cm</span>
         <input
           type="range"
           min={50}
@@ -42,6 +46,18 @@ export function ControlPanel({
           step={50}
           value={maxRange}
           onChange={(e) => onMaxRange(Number(e.target.value))}
+        />
+      </label>
+
+      <label className="field">
+        <span className="field-label">Distancia de detección: {detectDistance} cm</span>
+        <input
+          type="range"
+          min={20}
+          max={400}
+          step={10}
+          value={detectDistance}
+          onChange={(e) => onDetectDistance(Number(e.target.value))}
         />
       </label>
 

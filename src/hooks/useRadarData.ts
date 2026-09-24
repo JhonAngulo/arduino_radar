@@ -6,7 +6,7 @@ import { ConnectionStatus, type RadarReading, type SerialSettings } from '../typ
 
 const MAX_HISTORY = 360
 
-export function useRadarData(settings: SerialSettings) {
+export function useRadarData(settings: SerialSettings, detectDistance: number) {
   const [status, setStatus] = useState<ConnectionStatus>(ConnectionStatus.Disconnected)
   const [portName, setPortName] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -17,6 +17,8 @@ export function useRadarData(settings: SerialSettings) {
   const serialRef = useRef(createSerialPort())
   const settingsRef = useRef(settings)
   settingsRef.current = settings
+  const detectDistanceRef = useRef(detectDistance)
+  detectDistanceRef.current = detectDistance
 
   useEffect(() => {
     return () => {
@@ -38,6 +40,7 @@ export function useRadarData(settings: SerialSettings) {
           const parsed = parseReading(line)
           if (parsed) {
             const reading: RadarReading = { ...parsed, timestamp: performance.now() }
+            reading.detected = parsed.distance > 0 && parsed.distance <= detectDistanceRef.current
             if (reading.detected) playRadarBlip()
             setCurrent(reading)
             setHistory((prev) => [...prev.slice(-(MAX_HISTORY - 1)), reading])

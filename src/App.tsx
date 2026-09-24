@@ -12,10 +12,12 @@ export default function App() {
   const [persistSeconds, setPersistSeconds] = useState(2.5)
   const [barColor, setBarColor] = useState<BarColor>('green')
   const [maxRange, setMaxRange] = useState(200)
+  const [detectDistance, setDetectDistance] = useState(150)
 
-  const { supported, status, portName, error, current, history, connect, disconnect } = useRadarData({
-    baudRate,
-  })
+  const { supported, status, portName, error, current, history, connect, disconnect } = useRadarData(
+    { baudRate },
+    detectDistance
+  )
 
   const active = status === ConnectionStatus.Connected
 
@@ -47,6 +49,8 @@ export default function App() {
             onBarColor={setBarColor}
             maxRange={maxRange}
             onMaxRange={setMaxRange}
+            detectDistance={detectDistance}
+            onDetectDistance={setDetectDistance}
           />
           <DataPanel current={current} sampleCount={history.length} active={active} />
         </aside>
@@ -58,6 +62,7 @@ export default function App() {
               persistSeconds={persistSeconds}
               barColor={barColor}
               maxRange={maxRange}
+              detectDistance={detectDistance}
               active={active}
             />
           </div>
